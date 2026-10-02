@@ -107,3 +107,4 @@ Nếu hướng dẫn này hữu ích đối với dự án của bạn, bạn c�
   <img src="https://img.vietqr.io/image/970422-0844491666-compact2.png" alt="Mã QR Donate" width="280"/>
   <p><i>Cảm ơn sự hỗ trợ và đồng hành của bạn!</i></p>
 </div>
+Dự án phục vụ mục đích nghiên cứu học thuật và tham khảo. Tác giả không chịu trách nhiệm đối với bất kỳ rủi ro, hư hỏng thiết bị hoặc mất an toàn giao thông nào phát sinh khi người dùng áp dụng thực tế
