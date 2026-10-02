@@ -1,0 +1,125 @@
+================================================================================
+VINFAST EVO200 CAN BUS ID MAP & BITSTRUCTURE FOR ESP32-S3 DEVELOPMENT
+================================================================================
+
+--------------------------------------------------------------------------------
+1. NHÓM ĐIỀU KHIỂN NGUỒN & HỆ THỐNG (VCU / SMARTKEY)
+--------------------------------------------------------------------------------
+
+[ID: 0x101] - Trạng thái Khóa điện (Ignition State)
+  - Độ dài (DLC): 3 Bytes
+  - Cấu trúc Bit/Byte:
+    * Byte 0: Trạng thái nguồn chính
+      + 0x00: Xe tắt hoàn toàn (Key OFF)
+      + 0x11: Xe mở nguồn (Key ON)
+    * Byte 1: Trạng thái hệ thống phụ (ACC)
+      + 0x10: Thường cố định khi kích hoạt nguồn.
+    * Byte 2: Trạng thái kích hoạt sạc / an toàn
+      + 0x00: Chế độ tắt nguồn cắm sạc
+      + 0x01: Chế độ bật nguồn (sẵn sàng chạy hoặc sạc có bật màn hình)
+
+[ID: 0x102] - Phản hồi từ hệ thống Smartkey
+  - Độ dài (DLC): 3 Bytes
+  - Dữ liệu mẫu: 30 00 01
+
+[ID: 0x110] - Trạng thái vận hành tổng thể của Xe (Vehicle Mode)
+  - Độ dài (DLC): 8 Bytes
+  - Cấu trúc Bit/Byte:
+    * Byte 0: Chế độ hoạt động
+      + 0x00: Xe đang ở trạng thái chạy bình thường (Driving)
+      + 0x30: Xe đang ở chế độ sạc (Charging Mode)
+    * Byte 3: Logic an toàn / Trạng thái kết nối sạc
+      + 0x00: Chưa cắm sạc / Đang chạy
+      + 0x01: Đã cắm sạc thành công và có giao tiếp OBC
+
+[ID: 0x189] - Tín hiệu Tay ga & Nút bấm ghi nhận từ tay lái
+  - Độ dài (DLC): 2 Bytes
+  - Cấu trúc Bit/Byte:
+    * Thay đổi liên tục khi người dùng vặn ga hoặc bấm các nút chức năng trên cùm công tắc.
+
+--------------------------------------------------------------------------------
+2. NHÓM ĐIỀU KHIỂN ĐỘNG CƠ (MCU - MOTOR CONTROLLER)
+--------------------------------------------------------------------------------
+
+[ID: 0x200] - Trạng thái tải của bộ điều khiển MCU
+  - Độ dài (DLC): Varia (thường từ 5 - 8 Bytes)
+  - Đặc điểm: Khi tắt nguồn cắm sạc, dữ liệu toàn bộ bằng 00. Khi chạy, Byte thay đổi theo nhiệt độ sò công suất (Mosfet) và lỗi hệ thống động cơ.
+
+[ID: 0x201] - Tốc độ Động cơ & Dòng điện động cơ (Động cơ xả tải)
+  - Độ dài (DLC): 8 Bytes
+  - Cấu trúc Bit/Byte:
+    * Byte 0 & Byte 1: Tốc độ vòng tua động cơ (RPM) hoặc Tốc độ xe quy đổi.
+    * Byte 3 & Byte 4: Dòng điện pha động cơ cấp cho motor 2.5kW (Giá trị tăng mạnh khi kéo ga chịu tải thực tế).
+
+--------------------------------------------------------------------------------
+3. NHÓM QUẢN LÝ PIN LFP (BMS - BATTERY MANAGEMENT SYSTEM)
+--------------------------------------------------------------------------------
+
+[ID: 0x300] - Định danh/Thông tin phần cứng Pin (Battery ID / Serial)
+  - Độ dài (DLC): 8 Bytes
+  - Đặc điểm: Chứa chuỗi mã hóa tĩnh nhận diện gói pin chính hãng của VinFast.
+
+[ID: 0x303] - Chu kỳ sống và Trạng thái bảo vệ Pin (BMS Heartbeat & Status)
+  - Độ dài (DLC): 8 Bytes
+  - Cấu trúc Bit/Byte:
+    * Byte 0: Rolling Counter (Biến đếm vòng từ 0x00 đến 0xFF) liên tục tăng để các ECU khác biết BMS còn sống.
+    * Byte 6 & Byte 7: Mã trạng thái lỗi hoặc Trạng thái đóng cắt Rơ-le (Relay) bảo vệ dòng/áp.
+
+[ID: 0x309] - Điện áp tổng và Dung lượng Pin (Pack Voltage & State of Charge)
+  - Độ dài (DLC): 8 Bytes
+  - Cấu trúc Bit/Byte:
+    * Byte 2 & Byte 3: Điện áp tổng của khối pin (Pack Voltage).
+      + Ví dụ: 8D 5F -> Hex 0x8D5F = 36191 -> Quy đổi: 61.9V
+    * Byte 4 hoặc Byte 5: Phần trăm Pin còn lại (% SOC).
+
+[ID: 0x30E] - Nhiệt độ Khối Pin (Battery Pack Temperatures)
+  - Độ dài (DLC): 8 Bytes
+  - Cấu trúc Bit/Byte:
+    * Byte 0, Byte 1, Byte 2: Dữ liệu từ các cảm biến nhiệt độ (NTC) đặt bên trong lõi pin.
+    * Giá trị thô dạng Hex (ví dụ: 8D, 8C) tương đương dải nhiệt độ vận hành bình thường từ 25°C - 45°C sau khi trừ đi giá trị offset.
+
+--------------------------------------------------------------------------------
+4. NHÓM ĐIỆN ÁP CHI TIẾT TỪNG CELL PIN LFP
+--------------------------------------------------------------------------------
+- Đặc điểm: Hệ thống pin Evo200 dùng pin LFP, điện áp danh định mỗi cell khoảng 3.2V - 3.3V. 
+- Dữ liệu được chia đều vào các ID liên tiếp, mỗi ID mang giá trị của tối đa 4 cell (Mỗi cell chiếm 2 Bytes - High Byte & Low Byte).
+
+[ID: 0x310] -> Điện áp Cell 1 đến Cell 4
+[ID: 0x311] -> Điện áp Cell 5 đến Cell 8
+[ID: 0x312] -> Điện áp Cell 9 đến Cell 12
+[ID: 0x313] -> Điện áp Cell 13 đến Cell 16
+... tịnh tiến liên tục đến:
+[ID: 0x31B] -> Điện áp các cell cuối cùng trong chuỗi.
+
+* Công thức giải mã áp Cell chung cho nhóm này:
+  - Cấu trúc 1 ID: [Byte 0][Byte 1] [Byte 2][Byte 3] [Byte 4][Byte 5] [Byte 6][Byte 7]
+                    |--- Cell A ---| |--- Cell B ---| |--- Cell C ---| |--- Cell D ---|
+  - Ví dụ thực tế từ log: 80 7A (Hex 0x807A) = 32890 (Thập phân)
+  - Quy đổi hệ số: 32890 / 10000 = 3.289 Volt (Hoàn toàn chính xác với điện áp pin LFP khi chạy).
+
+--------------------------------------------------------------------------------
+5. NHÓM BỘ SẠC (OBC - ON BOARD CHARGER)
+--------------------------------------------------------------------------------
+- Đặc điểm: Nhóm này chỉ kích hoạt và thay đổi dữ liệu liên tục khi xe ở trạng thái cắm sạc.
+
+[ID: 0x340] - Lệnh yêu cầu sạc từ BMS gửi tới Bộ sạc (Charger Control Request)
+  - Quy định dòng điện tối đa và điện áp tối đa mà bộ sạc được phép cấp vào xe để an toàn.
+
+[ID: 0x342] - Trạng thái phản hồi thực tế của Bộ sạc (Charger Output Status)
+  - Độ dài (DLC): 8 Bytes
+  - Cấu trúc Bit/Byte:
+    * Byte 2 & Byte 3: Điện áp sạc đầu ra thực tế của OBC cấp vào pin.
+    * Byte 6 & Byte 7: Dòng điện sạc thực tế (Charging Current).
+
+--------------------------------------------------------------------------------
+6. NHÓM LỆNH CHẨN ĐOÁN LỖI VÀ ĐỌC THÔNG SỐ SÂU (UDS / DIAGNOSTIC)
+--------------------------------------------------------------------------------
+
+[ID: 0x006] - Thiết bị Chẩn đoán gửi Yêu cầu (Diagnostic Request / Tx)
+  - Gửi lệnh theo chuẩn ISO 14229 (UDS) để yêu cầu ECU đọc mã lỗi (DTC) hoặc truy xuất số VIN, phiên bản firmware.
+  - Lệnh quét mẫu: 02 01 30 (Yêu cầu khởi tạo phiên chẩn đoán mở rộng).
+
+[ID: 0x002] - ECU trên xe phản hồi dữ liệu (Diagnostic Response / Rx)
+  - Trả lời kết quả chẩn đoán. Khi dữ liệu dài (như số VIN hoặc danh sách mã lỗi), ID này sẽ dùng giao thức đa khung (Multi-frame):
+    * Khung đầu (First Frame): 10 XX ...
+    * Khung nối tiếp (Consecutive Frame): 21 XX ..., 22 XX ..., 23 XX ...

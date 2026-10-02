@@ -1,0 +1,134 @@
+================================================================================
+VINFAST KLARA S1 CAN BUS NETWORK - SPECIFICATION & ID STRUCTURE LOG
+================================================================================
+Tài liệu định nghĩa các vùng phân khu chức năng, cấu trúc định danh thiết bị (ECU)
+và giải mã các byte dữ liệu thô phục vụ lập trình nhúng (ESP32 / Arduino Framework).
+
+--------------------------------------------------------------------------------
+1. PHÂN KHU HỆ THỐNG NGUỒN & THÂN XE (VCU / SCU / DASHBOARD)
+--------------------------------------------------------------------------------
+
+[ID: 0x101] - Trạng thái Nguồn xe (Ignition Switch State)
+  - Độ dài (DLC): 8 Bytes
+  - Chức năng: Đồng bộ hóa trạng thái ổ khóa điện trên mạng CAN.
+  - Cấu trúc mẫu: 
+    * Khi tắt khóa:  00 10 00 00 00 00 00 00
+    * Khi bật khóa:  Byte đầu dịch chuyển báo trạng thái nguồn chính hoạt động.
+
+[ID: 0x102] - Bộ điều khiển Khóa Thông minh (SCU - Smartkey Control Unit)
+  - Độ dài (DLC): 3 hoặc 8 Bytes
+  - Chức năng: Gửi dữ liệu xác thực chìa khóa (FOB) và mã hóa bảo mật khởi động.
+  - Dữ liệu mẫu:  30 00 01 ...
+
+[ID: 0x10F] - Trạng thái Cùm Công tắc & Chế độ lái (HMI Switch Status)
+  - Độ dài (DLC): 8 Bytes
+  - Chức năng: Ghi nhận thao tác nút bấm thực tế từ người lái.
+  - Phân tích Byte:
+    * Byte 0 phản ánh chế độ vận hành:
+      + 10 00 00... : Trạng thái mặc định / Chuyển chế độ
+      + 12 00 00... : Chế độ lái ECO hoạt động.
+      + 13 00 00... : Chế độ lái SPORT hoạt động.
+    * Nhận diện nút P (Park / Đỗ xe): Byte thay đổi trạng thái khi bấm nhả nút P để tắt chế độ an toàn trước khi chạy.
+
+[ID: 0x110] - Chế độ Vận hành Tổng thể (Vehicle Operation Mode)
+  - Độ dài (DLC): 8 Bytes
+  - Chức năng: Định cấu hình trạng thái tổng quan của xe.
+  - Dữ liệu mẫu (Khi xe chạy ổn định): 30 00 00 01 00 00 00 00
+
+[ID: 0x127] / [ID: 0x128] - Cảm biến An toàn Cơ học (Safety Sensors)
+  - Độ dài (DLC): 8 Bytes
+  - Chức năng: Giám sát trạng thái chân chống bên (đá chống/gạt chống) và hành trình của công tắc phanh trước/sau để can thiệp ngắt động cơ khi cần thiết.
+
+--------------------------------------------------------------------------------
+2. PHÂN KHU ĐIỀU KHIỂN ĐỘNG CƠ & TRUYỀN ĐỘNG (MCU - MOTOR CONTROLLER)
+--------------------------------------------------------------------------------
+
+[ID: 0x200] - Trạng thái Tải & Nhiệt độ IC Điều tốc (MCU Thermal Status)
+  - Độ dài (DLC): 8 Bytes
+  - Chức năng: Báo lỗi chẩn đoán nội bộ của IC và nhiệt độ của dàn sò công suất (Mosfet).
+
+[ID: 0x201] - Tốc độ Vòng tua Động cơ & Vận tốc Xe (Motor RPM & Speed)
+  - Độ dài (DLC): 8 Bytes
+  - Chức năng: Đồng bộ tốc độ xe thời gian thực lên màn hình hiển thị.
+  - Phân tích Byte dữ liệu thực nghiệm:
+    * Xe đứng yên (0 km/h):  00 00 00 00 01 FB 00 08
+    * Chạy đều 10 km/h:      00 5F 00 04 01 F5 00 0F  --> (Byte[0]<<8 | Byte[1]) = 0x005F (95)
+    * Chạy đều 20 km/h:      00 C3 00 09 01 F5 02 12  --> (Byte[0]<<8 | Byte[1]) = 0x00C3 (195)
+    * Chạy đều 30 km/h:      01 2D 00 0D 01 F4 03 15  --> (Byte[0]<<8 | Byte[1]) = 0x012D (401)
+    * Chạy đều 40 km/h:      01 91 00 11 01 F4 03 18  --> (Byte[0]<<8 | Byte[1]) = 0x0191 (401)
+  - Công thức quy đổi tốc độ: Vận tốc (km/h) = [(Byte[0] << 8) | Byte[1]] / 10.0
+  - Dòng điện pha (Phase Current): Byte 3 tăng tỉ lệ thuận theo dải vận tốc (04 -> 09 -> 0D -> 11) khi xe chịu tải thực tế.
+
+[ID: 0x203] - Vị trí Hành trình Tay ga (Throttle Position)
+  - Độ dài (DLC): 7 Bytes
+  - Chức năng: Truyền biên độ góc vặn tay ga của người dùng từ cảm biến ga về MCU.
+  - Dữ liệu mẫu: 00 02 C8 56 20 00 00
+
+--------------------------------------------------------------------------------
+3. PHÂN KHU QUẢN LÝ NĂNG LƯỢNG & HỆ THỐNG PIN (BMS)
+--------------------------------------------------------------------------------
+
+[ID: 0x300] - Định danh Phần cứng Pin (Battery Pack Hardware ID)
+  - Độ dài (DLC): 8 Bytes
+  - Chức năng: Gửi mã sê-ri tĩnh hóa giúp xe kiểm tra tính chính hãng của gói pin.
+  - Dữ liệu mẫu: 01 F3 F6 3D 02 06 F6 A3
+
+[ID: 0x303] - Chu kỳ sống & Trạng thái Rơ-le Pin (BMS Heartbeat & Relay)
+  - Độ dài (DLC): 8 Bytes
+  - Phân tích Byte:
+    * Byte 0: Biến đếm vòng (Rolling Counter) tăng liên tục 0x00 -> 0xFF để giữ nhịp kết nối (Keep-alive).
+    * Các byte sau quản lý trạng thái đóng/ngắt rơ-le (Relay) bảo vệ xả/nạp của khối pin.
+
+[ID: 0x309] - Dung lượng Pin & Điện áp Tổng (SOC & Pack Voltage)
+  - Độ dài (DLC): 8 Bytes
+  - Phân tích Byte:
+    * Byte 2 & Byte 3: Điện áp tổng của khối pin (Pack Voltage).
+      + Ví dụ mã Hex: 66 25 hoặc 66 3C.
+    * Byte 6 & Byte 7: Dòng điện xả tổng cấp từ pin ra hệ thống (Pack Current).
+      + Khi xe không tải đứng yên, giá trị hiển thị bù 2 dạng âm sát giới hạn (FF FB, FF D2, FF BA).
+
+[ID: 0x30E] - Nhiệt độ Lõi Khối Pin (Battery Temperature)
+  - Độ dài (DLC): 8 Bytes
+  - Chức năng: Cập nhật nhiệt độ vận hành từ các cảm biến nhiệt (NTC) đặt trong gói cell.
+
+--------------------------------------------------------------------------------
+4. DẢI ĐIỆN ÁP CHI TIẾT TỪNG CELL PIN CỦA KLARA S1
+--------------------------------------------------------------------------------
+- Chức năng: BMS truyền tuần hoàn điện áp từng cell pin riêng lẻ lên mạng giao tiếp để giám sát độ lệch áp giữa các cell.
+- Cấu trúc đóng gói: Mỗi cell chiếm 2 Bytes liền kề (High Byte & Low Byte).
+
+  [ID: 0x310] --> Điện áp Cell 1 đến Cell 4
+  [ID: 0x311] --> Điện áp Cell 5 đến Cell 8
+  [ID: 0x312] --> Điện áp Cell 9 đến Cell 12
+  [ID: 0x313] --> Điện áp Cell 13 đến Cell 16
+  [ID: 0x314] --> Điện áp các cell cuối cùng (DLC thường bằng 4 do số cell lẻ)
+
+- Mẫu dữ liệu thô: 
+  ID 0x310: [91 F0] [91 6E] [01 91] [F0 0B]
+             |--C1--| |--C2--| |--C3--| |--C4--|
+- Cách giải mã áp Cell:
+  Lấy cặp Byte ghép lại (Ví dụ Cell 1: 0x91F0 = 37360 thập phân).
+  Điện áp cell thực tế = 37360 / 10000.0 = 3.736 Volt (D dải áp đặc trưng của pin Lithium-ion NMC).
+
+--------------------------------------------------------------------------------
+5. PHÂN KHU VIỄN THÔNG & TIỆN ÍCH THÔNG MINH (TCU / GATEWAY / OBC)
+--------------------------------------------------------------------------------
+
+[ID: 0x326] - Khung truyền Đồng bộ Màn hình (Gateway Heartbeat)
+  - Độ dài (DLC): 8 Bytes
+  - Chức năng: Giữ nhịp kết nối (Handshake) giữa cụm đồng hồ màn hình LCD và bộ điều khiển trung tâm. Nếu mất bản tin này, xe sẽ báo lỗi kết nối hệ thống.
+  - Dữ liệu mẫu: 00 00 00 00 01 00 00 00
+
+[ID: 0x340] / [ID: 0x342] - Giao tiếp Bộ sạc (OBC - On Board Charger)
+  - Chức năng: Chỉ kích hoạt dữ liệu khi cắm sạc thực tế. `0x340` gửi lệnh yêu cầu dòng sạc từ BMS, `0x342` là dòng/áp thực tế bộ sạc nạp vào xe.
+
+[ID: 0x400] - Đồng bộ Thời gian thực (RTC Synchronization)
+  - Độ dài (DLC): 8 Bytes
+  - Chức năng: Nhận dữ liệu ngày/giờ cập nhật từ định vị vệ tinh/mạng di động đồng bộ lên đồng hồ xe.
+  - Dữ liệu mẫu: 19 08 07 01 20 09 05 00
+
+[ID: 0x502] - Bộ viễn thông chứa eSIM & Định vị (TCU - Telematics Control Unit)
+  - Độ dài (DLC): 8 Bytes
+  - Chức năng: Quản lý trạng thái kết nối mạng di động (4G/LTE qua eSIM tích hợp) để truyền dữ liệu định vị GPS và đồng bộ trạng thái xe về ứng dụng đám mây (VinFast App).
+  - Dữ liệu mẫu khi vận hành: 23 00 00 01 00 01 00 00
+================================================================================
